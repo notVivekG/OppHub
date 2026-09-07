@@ -139,9 +139,6 @@ async function run() {
   } else {
     console.log(`💡 No Supabase credentials. Running in local fallback mode.`);
   }
-  } else {
-    console.log(`💡 No Supabase credentials. Running in local fallback mode.`);
-  }
 
   let changesDetected = 0;
 
