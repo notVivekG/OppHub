@@ -52,16 +52,14 @@ export default function SettingsPage() {
   const [telegramTestResult, setTelegramTestResult] = React.useState<{ success: boolean; message: string } | null>(null);
 
   // Watchlist Items
-  const [watchlist, setWatchlist] = React.useState<{ id: string; label: string; url: string }[]>([
-    { id: '1', label: 'NASA OSTEM Internship Portal', url: 'https://intern.nasa.gov' },
-    { id: '2', label: 'Palantir Early Career', url: 'https://www.palantir.com/careers/early-talent/' },
-  ]);
+  const [watchlist, setWatchlist] = React.useState<WatchlistItem[]>([]);
   const [newWatchLabel, setNewWatchLabel] = React.useState('');
   const [newWatchUrl, setNewWatchUrl] = React.useState('');
+  const [watchlistError, setWatchlistError] = React.useState<string | null>(null);
 
   const [isConfigured, setIsConfigured] = React.useState(false);
 
-  // Load settings on mount
+  // Load settings and watchlist on mount
   React.useEffect(() => {
     setIsConfigured(isSupabaseConfigured());
 
@@ -95,15 +93,47 @@ export default function SettingsPage() {
       }
     }
 
-    load();
-
-    // Also load local watchlist if saved
-    const savedWatch = localStorage.getItem('opphub-watchlist');
-    if (savedWatch) {
+    async function loadWatchlist() {
+      setWatchlistError(null);
       try {
-        setWatchlist(JSON.parse(savedWatch));
-      } catch {}
+        const res = await fetch('/api/watchlist');
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && !data.isDemo) {
+          // Supabase is authoritative (even if empty array [])
+          setWatchlist(data.watchlist || []);
+          localStorage.setItem('opphub-watchlist', JSON.stringify(data.watchlist || []));
+          return;
+        } else if (!res.ok && !data.isDemo) {
+          // Supabase is configured but query failed
+          setWatchlistError(data.error || 'Failed to load watchlist from Supabase.');
+          return;
+        }
+      } catch (err: any) {
+        if (isSupabaseConfigured()) {
+          setWatchlistError(err.message || 'Network error while contacting Supabase API.');
+          return;
+        }
+      }
+
+      // Offline / Unconfigured Demo fallback
+      const savedWatch = localStorage.getItem('opphub-watchlist');
+      if (savedWatch) {
+        try {
+          setWatchlist(JSON.parse(savedWatch));
+          return;
+        } catch {}
+      }
+
+      // Initial starter targets for local preview only
+      const defaultStarter: WatchlistItem[] = [
+        { id: 'watch-1', label: 'NASA OSTEM Internship Portal', url: 'https://intern.nasa.gov', last_checked_at: new Date().toISOString() },
+        { id: 'watch-2', label: 'Palantir Early Career', url: 'https://www.palantir.com/careers/early-talent/', last_checked_at: new Date().toISOString() },
+      ];
+      setWatchlist(defaultStarter);
     }
+
+    load();
+    loadWatchlist();
   }, []);
 
   const toggleGradYear = (year: number) => {
@@ -136,21 +166,71 @@ export default function SettingsPage() {
     setTargetRoles(targetRoles.filter((item) => item !== r));
   };
 
-  const addWatchlistTarget = (e: React.FormEvent) => {
+  const addWatchlistTarget = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newWatchLabel.trim() && newWatchUrl.trim()) {
-      const updated = [
-        ...watchlist,
-        { id: `watch-${Date.now()}`, label: newWatchLabel.trim(), url: newWatchUrl.trim() },
-      ];
-      setWatchlist(updated);
-      localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
-      setNewWatchLabel('');
-      setNewWatchUrl('');
+    if (!newWatchLabel.trim() || !newWatchUrl.trim()) return;
+
+    setWatchlistError(null);
+    const label = newWatchLabel.trim();
+    const url = newWatchUrl.trim();
+
+    try {
+      const res = await fetch('/api/watchlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, url }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.item) {
+        const updated = [...watchlist, data.item];
+        setWatchlist(updated);
+        localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
+        setNewWatchLabel('');
+        setNewWatchUrl('');
+        return;
+      } else if (!res.ok && !data.isDemo) {
+        // Supabase write genuinely failed - do NOT fallback to local state
+        setWatchlistError(data.error || 'Failed to add target to Supabase watchlist.');
+        return;
+      }
+    } catch (err: any) {
+      if (isConfigured) {
+        setWatchlistError(err.message || 'Network error while adding target to Supabase.');
+        return;
+      }
     }
+
+    // Offline / Demo fallback
+    const fallbackItem: WatchlistItem = {
+      id: `watch-${Date.now()}`,
+      label,
+      url,
+      last_checked_at: new Date().toISOString(),
+    };
+    const updated = [...watchlist, fallbackItem];
+    setWatchlist(updated);
+    localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
+    setNewWatchLabel('');
+    setNewWatchUrl('');
   };
 
-  const removeWatchlistTarget = (id: string) => {
+  const removeWatchlistTarget = async (id: string) => {
+    setWatchlistError(null);
+    try {
+      const res = await fetch(`/api/watchlist?id=${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && !data.isDemo) {
+        // Supabase delete failed - do NOT remove from frontend state/localStorage
+        setWatchlistError(data.error || 'Failed to remove target from Supabase watchlist.');
+        return;
+      }
+    } catch (err: any) {
+      if (isConfigured) {
+        setWatchlistError(err.message || 'Network error while removing target from Supabase.');
+        return;
+      }
+    }
+
     const updated = watchlist.filter((w) => w.id !== id);
     setWatchlist(updated);
     localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
