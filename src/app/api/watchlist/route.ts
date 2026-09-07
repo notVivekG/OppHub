@@ -32,15 +32,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const { label, url, css_selector } = body;
+
+    if (!label || !url) {
+      return NextResponse.json(
+        { success: false, error: 'Label and URL are required', isDemo: false },
+        { status: 400 }
+      );
+    }
+
     const supabase = getSupabaseAdmin();
 
     if (supabase) {
       const { data, error } = await supabase
         .from('watchlist')
         .insert({
-          label: body.label,
-          url: body.url,
-          css_selector: body.css_selector || null,
+          label: label.trim(),
+          url: url.trim(),
+          css_selector: css_selector ? css_selector.trim() : null,
           last_checked_at: new Date().toISOString(),
         })
         .select()
@@ -58,9 +67,9 @@ export async function POST(request: NextRequest) {
 
     const fallbackItem = {
       id: body.id || `watch-${Date.now()}`,
-      label: body.label,
-      url: body.url,
-      css_selector: body.css_selector || null,
+      label: label.trim(),
+      url: url.trim(),
+      css_selector: css_selector ? css_selector.trim() : null,
       last_checked_at: new Date().toISOString(),
     };
 

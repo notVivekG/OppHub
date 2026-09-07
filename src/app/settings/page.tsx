@@ -181,16 +181,38 @@ export default function SettingsPage() {
         body: JSON.stringify({ label, url }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.item) {
+
+      if (res.ok && !data.isDemo && data.item) {
+        // Supabase successfully inserted the row
         const updated = [...watchlist, data.item];
         setWatchlist(updated);
         localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
         setNewWatchLabel('');
         setNewWatchUrl('');
         return;
-      } else if (!res.ok && !data.isDemo) {
+      } else if (!res.ok) {
         // Supabase write genuinely failed - do NOT fallback to local state
         setWatchlistError(data.error || 'Failed to add target to Supabase watchlist.');
+        return;
+      } else if (data.isDemo) {
+        if (isConfigured) {
+          // Frontend is configured for Supabase, but server returned demo fallback
+          setWatchlistError('Supabase is not configured on the server. Please verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local.');
+          return;
+        }
+
+        // Offline / Unconfigured fallback
+        const fallbackItem: WatchlistItem = data.item || {
+          id: `watch-${Date.now()}`,
+          label,
+          url,
+          last_checked_at: new Date().toISOString(),
+        };
+        const updated = [...watchlist, fallbackItem];
+        setWatchlist(updated);
+        localStorage.setItem('opphub-watchlist', JSON.stringify(updated));
+        setNewWatchLabel('');
+        setNewWatchUrl('');
         return;
       }
     } catch (err: any) {
@@ -200,7 +222,7 @@ export default function SettingsPage() {
       }
     }
 
-    // Offline / Demo fallback
+    // Offline / Demo fallback for pure network error
     const fallbackItem: WatchlistItem = {
       id: `watch-${Date.now()}`,
       label,
@@ -219,9 +241,12 @@ export default function SettingsPage() {
     try {
       const res = await fetch(`/api/watchlist?id=${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok && !data.isDemo) {
+      if (!res.ok) {
         // Supabase delete failed - do NOT remove from frontend state/localStorage
         setWatchlistError(data.error || 'Failed to remove target from Supabase watchlist.');
+        return;
+      } else if (data.isDemo && isConfigured) {
+        setWatchlistError('Supabase is not configured on the server.');
         return;
       }
     } catch (err: any) {
@@ -634,6 +659,13 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+
+          {watchlistError && (
+            <div className="flex items-center space-x-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{watchlistError}</span>
+            </div>
+          )}
 
           {/* Add to watchlist */}
           <div className="p-3 rounded-lg border border-dashed border-border bg-muted/20 space-y-2">
