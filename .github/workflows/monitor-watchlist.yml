@@ -1,0 +1,34 @@
+name: Monitor Watchlist Webpages
+
+on:
+  schedule:
+    # Run twice daily (every 12 hours)
+    - cron: '0 */12 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions
+
+jobs:
+  monitor:
+    name: Check Watchlist for Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Run Watchlist Monitor Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node scripts/monitor-watchlist.mjs

@@ -1,0 +1,21 @@
+# Next.js
+.next/
+out/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# References (for reading/porting open-source code; excluded from final deploy)
+reference/
+
+# Environment
+.env
+.env*.local
+
+# OS
+.DS_Store
+*.pem
+Thumbs.db
