@@ -197,7 +197,7 @@ export default function SettingsPage() {
       } else if (data.isDemo) {
         if (isConfigured) {
           // Frontend is configured for Supabase, but server returned demo fallback
-          setWatchlistError('Supabase is not configured on the server. Please verify SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local.');
+          setWatchlistError('Supabase is not configured on the server. Please verify SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local.');
           return;
         }
 
@@ -698,11 +698,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Save Bar */}
-        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card shadow-sm sticky bottom-4 z-20 backdrop-blur-md">
-          <div className="text-xs text-muted-foreground">
-            {isConfigured ? '⚡ Synced with Supabase' : '💡 Local Mode (saved to browser)'}
-          </div>
-
+        <div className="flex items-center justify-end p-4 rounded-xl border border-border bg-card shadow-sm sticky bottom-4 z-20 backdrop-blur-md">
           <div className="flex items-center space-x-3">
             {savedMessage && (
               <span className="text-xs text-emerald-400 font-medium flex items-center space-x-1 animate-in fade-in">

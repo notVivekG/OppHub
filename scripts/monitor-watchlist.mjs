@@ -99,8 +99,8 @@ async function run() {
 
   console.log('🔍 OppHub Watchlist Monitor Starting...');
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
   let supabase = null;
   let watchlist = [...DEFAULT_WATCHLIST];
   let telegramConfig = {
@@ -108,8 +108,8 @@ async function run() {
     chatId: process.env.TELEGRAM_CHAT_ID,
   };
 
-  if (supabaseUrl && serviceKey && !supabaseUrl.includes('placeholder')) {
-    supabase = createClient(supabaseUrl, serviceKey);
+  if (supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
+    supabase = createClient(supabaseUrl, secretKey);
 
     // 1. Load Watchlist targets from Supabase
     const { data, error } = await supabase.from('watchlist').select('*');

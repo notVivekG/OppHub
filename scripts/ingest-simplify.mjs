@@ -329,12 +329,12 @@ async function run() {
   }
 
   // Upsert to Supabase if credentials available and not dry-run
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
 
-  if (!isDryRun && supabaseUrl && serviceKey && !supabaseUrl.includes('placeholder')) {
+  if (!isDryRun && supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
     console.log(`🔌 Connecting to Supabase (${supabaseUrl})...`);
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const supabase = createClient(supabaseUrl, secretKey);
 
     // Upsert in batches of 50
     const batchSize = 50;
