@@ -9,6 +9,8 @@ export interface TelegramResponse {
   success: boolean;
   messageId?: number;
   error?: string;
+  statusCode?: number;
+  retryAfter?: number;
 }
 
 export async function sendTelegramMessage(
@@ -21,6 +23,7 @@ export async function sendTelegramMessage(
   if (!token || !chatId || token.includes('placeholder') || chatId.includes('placeholder')) {
     return {
       success: false,
+      statusCode: 400,
       error: 'Telegram Bot Token or Chat ID not configured.',
     };
   }
@@ -40,19 +43,32 @@ export async function sendTelegramMessage(
 
     const data = await response.json();
     if (!data.ok) {
+      const headerRetry = response.headers.get('retry-after');
+      const paramRetry = data.parameters?.retry_after;
+      const retryAfter =
+        typeof paramRetry === 'number'
+          ? paramRetry
+          : headerRetry
+          ? parseInt(headerRetry, 10)
+          : undefined;
+
       return {
         success: false,
+        statusCode: response.status || data.error_code || 400,
         error: data.description || 'Failed to send Telegram message.',
+        retryAfter: retryAfter && !isNaN(retryAfter) ? retryAfter : undefined,
       };
     }
 
     return {
       success: true,
+      statusCode: response.status || 200,
       messageId: data.result?.message_id,
     };
   } catch (err: any) {
     return {
       success: false,
+      statusCode: 500,
       error: err.message || 'Network error while contacting Telegram API.',
     };
   }
