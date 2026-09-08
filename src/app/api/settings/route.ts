@@ -33,10 +33,10 @@ export async function GET() {
         // Connected to Supabase, but settings table has no row yet
         const initial = {
           ...DEFAULT_SETTINGS,
-          telegram_chat_id: process.env.TELEGRAM_CHAT_ID || '',
+          telegram_chat_id: '',
           notification_prefs: {
             ...DEFAULT_SETTINGS.notification_prefs,
-            telegram_bot_token: process.env.TELEGRAM_BOT_TOKEN || undefined,
+            telegram_bot_token: undefined,
           },
         };
         return NextResponse.json({ settings: initial, isDemo: false });

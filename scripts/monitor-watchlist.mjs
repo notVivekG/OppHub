@@ -65,10 +65,10 @@ function cleanHtmlToText(html, selector) {
 }
 
 async function sendTelegramAlert(text, config = {}) {
-  const token = config.token || process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = config.chatId || process.env.TELEGRAM_CHAT_ID;
+  const token = config.token;
+  const chatId = config.chatId;
   if (!token || !chatId || token.includes('placeholder')) {
-    console.log('  ℹ️ Telegram alert skipped: Bot Token or Chat ID not found in Supabase settings or environment.');
+    console.log('  ℹ️ Telegram alert skipped: Bot Token or Chat ID not found in Supabase settings.');
     return;
   }
 
@@ -104,8 +104,8 @@ async function run() {
   let supabase = null;
   let watchlist = [...DEFAULT_WATCHLIST];
   let telegramConfig = {
-    token: process.env.TELEGRAM_BOT_TOKEN,
-    chatId: process.env.TELEGRAM_CHAT_ID,
+    token: null,
+    chatId: null,
   };
 
   if (supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
@@ -120,15 +120,15 @@ async function run() {
       console.log(`📋 Supabase watchlist table is empty. Monitoring default starter targets.`);
     }
 
-    // 2. Load Telegram credentials from Supabase settings table if not set in environment
+    // 2. Load Telegram credentials exclusively from Supabase settings table
     try {
       const { data: settingsData } = await supabase.from('settings').select('*').limit(1).single();
       if (settingsData) {
-        if (!telegramConfig.chatId && settingsData.telegram_chat_id) {
+        if (settingsData.telegram_chat_id) {
           telegramConfig.chatId = settingsData.telegram_chat_id;
           console.log(`📱 Loaded Telegram Chat ID from Supabase settings table.`);
         }
-        if (!telegramConfig.token && settingsData.notification_prefs?.telegram_bot_token) {
+        if (settingsData.notification_prefs?.telegram_bot_token) {
           telegramConfig.token = settingsData.notification_prefs.telegram_bot_token;
           console.log(`🤖 Loaded Telegram Bot Token from Supabase settings table.`);
         }

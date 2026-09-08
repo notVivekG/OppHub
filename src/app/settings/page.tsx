@@ -596,7 +596,7 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-muted-foreground mb-1">Telegram Bot Token (Optional if set in .env)</label>
+                  <label className="block text-muted-foreground mb-1">Telegram Bot Token</label>
                   <input
                     type="password"
                     placeholder="e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"

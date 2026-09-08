@@ -32,10 +32,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fall back to environment variables if still missing
-    botToken = botToken || process.env.TELEGRAM_BOT_TOKEN;
-    chatId = chatId || process.env.TELEGRAM_CHAT_ID;
-
     if (!botToken || !chatId || botToken.includes('placeholder') || chatId.includes('placeholder')) {
       return NextResponse.json(
         { success: false, error: 'Telegram Bot Token or Chat ID not configured. Enter them above or save in Settings.' },

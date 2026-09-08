@@ -17,8 +17,8 @@ export async function sendTelegramMessage(
   text: string,
   config?: TelegramConfig
 ): Promise<TelegramResponse> {
-  const token = config?.botToken || process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = config?.chatId || process.env.TELEGRAM_CHAT_ID;
+  const token = config?.botToken;
+  const chatId = config?.chatId;
 
   if (!token || !chatId || token.includes('placeholder') || chatId.includes('placeholder')) {
     return {
