@@ -93,7 +93,31 @@ async function sendTelegramAlert(text, config = {}) {
   }
 }
 
+// Load Supabase credentials from .env.local if not already provided in environment (for local execution)
+function loadLocalEnv() {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const match = trimmed.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let val = match[2].trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if ((key === 'SUPABASE_URL' || key === 'SUPABASE_SECRET_KEY') && !process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+}
+
 async function run() {
+  loadLocalEnv();
   const args = process.argv.slice(2);
   const isDryRun = args.includes('--dry-run');
 
