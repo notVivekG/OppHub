@@ -320,11 +320,18 @@ export default function SettingsPage() {
     };
 
     try {
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to save preferences to Supabase.');
+        return;
+      }
 
       // Also persist to localStorage for instant local access
       localStorage.setItem('opphub-settings', JSON.stringify(payload));

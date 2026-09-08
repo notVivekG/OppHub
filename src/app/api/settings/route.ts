@@ -25,9 +25,21 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   if (supabase) {
     try {
-      const { data, error } = await supabase.from('settings').select('*').limit(1).single();
+      const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
       if (!error && data) {
         return NextResponse.json({ settings: data, isDemo: false });
+      }
+      if (!error && !data) {
+        // Connected to Supabase, but settings table has no row yet
+        const initial = {
+          ...DEFAULT_SETTINGS,
+          telegram_chat_id: process.env.TELEGRAM_CHAT_ID || '',
+          notification_prefs: {
+            ...DEFAULT_SETTINGS.notification_prefs,
+            telegram_bot_token: process.env.TELEGRAM_BOT_TOKEN || undefined,
+          },
+        };
+        return NextResponse.json({ settings: initial, isDemo: false });
       }
     } catch (err) {
       console.warn('Could not read from Supabase settings:', err);
@@ -44,22 +56,26 @@ export async function POST(request: NextRequest) {
 
     if (supabase) {
       // Upsert settings row
-      const { error } = await supabase.from('settings').upsert({
-        id: body.id || '00000000-0000-0000-0000-000000000001',
-        eligibility_rules: body.eligibility_rules,
-        notification_prefs: body.notification_prefs,
-        telegram_chat_id: body.telegram_chat_id,
-        watched_languages: body.watched_languages,
-      });
+      const { data, error } = await supabase
+        .from('settings')
+        .upsert({
+          id: body.id || '00000000-0000-0000-0000-000000000001',
+          eligibility_rules: body.eligibility_rules || DEFAULT_SETTINGS.eligibility_rules,
+          notification_prefs: body.notification_prefs || DEFAULT_SETTINGS.notification_prefs,
+          telegram_chat_id: body.telegram_chat_id || null,
+          watched_languages: body.watched_languages || DEFAULT_SETTINGS.watched_languages,
+        })
+        .select()
+        .single();
 
       if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ success: false, error: error.message, isDemo: false }, { status: 400 });
       }
-      return NextResponse.json({ success: true, isDemo: false });
+      return NextResponse.json({ success: true, settings: data, isDemo: false });
     }
 
     return NextResponse.json({ success: true, isDemo: true });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message, isDemo: false }, { status: 500 });
   }
 }
