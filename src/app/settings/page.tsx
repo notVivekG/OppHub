@@ -49,6 +49,8 @@ export default function SettingsPage() {
   const [telegramBotToken, setTelegramBotToken] = React.useState('');
   const [telegramChatId, setTelegramChatId] = React.useState('');
   const [testingTelegram, setTestingTelegram] = React.useState(false);
+  const [telegramCooldown, setTelegramCooldown] = React.useState(0);
+  const isTestingTelegramRef = React.useRef(false);
   const [telegramTestResult, setTelegramTestResult] = React.useState<{ success: boolean; message: string } | null>(null);
 
   // Watchlist Items
@@ -135,6 +137,15 @@ export default function SettingsPage() {
     load();
     loadWatchlist();
   }, []);
+
+  // Countdown timer for Telegram rate-limit cooldown
+  React.useEffect(() => {
+    if (telegramCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setTelegramCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [telegramCooldown]);
 
   const toggleGradYear = (year: number) => {
     setGradYears((prev) =>
@@ -262,6 +273,11 @@ export default function SettingsPage() {
   };
 
   const testTelegram = async () => {
+    // Prevent duplicate calls from rapid double-clicks or while cooldown is active
+    if (isTestingTelegramRef.current || testingTelegram || telegramCooldown > 0) {
+      return;
+    }
+    isTestingTelegramRef.current = true;
     setTestingTelegram(true);
     setTelegramTestResult(null);
 
@@ -275,11 +291,19 @@ export default function SettingsPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+
       if (res.ok && data.success) {
         setTelegramTestResult({
           success: true,
           message: '✓ Test message delivered successfully! Check your Telegram app.',
+        });
+      } else if (res.status === 429 || data.retryAfter) {
+        const waitSec = Number(data.retryAfter) || 8;
+        setTelegramCooldown(waitSec);
+        setTelegramTestResult({
+          success: false,
+          message: `Telegram rate limit active. Please wait ${waitSec}s before retrying.`,
         });
       } else {
         setTelegramTestResult({
@@ -293,6 +317,7 @@ export default function SettingsPage() {
         message: err.message || 'Network error while contacting test endpoint.',
       });
     } finally {
+      isTestingTelegramRef.current = false;
       setTestingTelegram(false);
     }
   };
@@ -598,11 +623,17 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={testTelegram}
-                  disabled={testingTelegram}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-medium transition-colors disabled:opacity-50"
+                  disabled={testingTelegram || telegramCooldown > 0}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>{testingTelegram ? 'Sending Test Message...' : 'Send Test Telegram Ping'}</span>
+                  <span>
+                    {testingTelegram
+                      ? 'Sending Test Message...'
+                      : telegramCooldown > 0
+                      ? `Cooldown Active (${telegramCooldown}s)`
+                      : 'Send Test Telegram Ping'}
+                  </span>
                 </button>
 
                 {telegramTestResult && (

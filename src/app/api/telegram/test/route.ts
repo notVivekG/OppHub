@@ -54,10 +54,17 @@ Your Telegram alert channel is now operational. You will receive high-priority i
     const result = await sendTelegramMessage(message, { botToken, chatId });
 
     if (!result.success) {
-      const isRateLimit = result.error?.toLowerCase().includes('too many requests');
+      const isRateLimit =
+        result.statusCode === 429 ||
+        result.error?.toLowerCase().includes('too many requests');
+
       return NextResponse.json(
-        { success: false, error: result.error },
-        { status: isRateLimit ? 429 : 400 }
+        {
+          success: false,
+          error: result.error,
+          retryAfter: isRateLimit ? (result.retryAfter ?? 8) : undefined,
+        },
+        { status: isRateLimit ? 429 : result.statusCode || 400 }
       );
     }
 
