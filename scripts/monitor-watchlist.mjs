@@ -133,7 +133,10 @@ async function run() {
   };
 
   if (supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
-    supabase = createClient(supabaseUrl, secretKey);
+    supabase = createClient(supabaseUrl, secretKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: typeof WebSocket !== 'undefined' ? undefined : { transport: class {} },
+    });
 
     // 1. Load Watchlist targets from Supabase
     const { data, error } = await supabase.from('watchlist').select('*');

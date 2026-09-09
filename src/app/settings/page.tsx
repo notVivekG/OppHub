@@ -624,7 +624,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={testTelegram}
                   disabled={testingTelegram || telegramCooldown > 0}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-medium transition-colors disabled:opacity-75 disabled:cursor-not-allowed disabled:bg-muted/50 disabled:border-border disabled:text-muted-foreground"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>

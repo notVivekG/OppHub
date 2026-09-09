@@ -18,6 +18,7 @@ export interface Opportunity {
   priority_score?: number | null;
   raw_snippet?: string | null;
   status: OpportunityStatus;
+  metadata?: Record<string, any> | null;
 }
 
 export type ApplicationStatus =
@@ -39,16 +40,122 @@ export interface Application {
   recruiter_contact?: string | null;
   notes?: string | null;
   result?: string | null;
+  status_changed_at?: string | null;
   updated_at: string;
   opportunity?: Opportunity;
+}
+
+export interface JsonResumeBasics {
+  name?: string;
+  label?: string;
+  email?: string;
+  phone?: string;
+  url?: string;
+  summary?: string;
+  location?: {
+    city?: string;
+    region?: string;
+    countryCode?: string;
+  };
+  profiles?: {
+    network?: string;
+    username?: string;
+    url?: string;
+  }[];
+}
+
+export interface JsonResumeWork {
+  name?: string;
+  position?: string;
+  url?: string;
+  startDate?: string;
+  endDate?: string;
+  summary?: string;
+  highlights?: string[];
+}
+
+export interface JsonResumeEducation {
+  institution?: string;
+  url?: string;
+  area?: string;
+  studyType?: string;
+  startDate?: string;
+  endDate?: string;
+  score?: string;
+  courses?: string[];
+}
+
+export interface JsonResumeSkill {
+  name?: string;
+  level?: string;
+  keywords?: string[];
+}
+
+export interface JsonResumeProject {
+  name?: string;
+  description?: string;
+  highlights?: string[];
+  keywords?: string[];
+  startDate?: string;
+  endDate?: string;
+  url?: string;
+}
+
+export interface JsonResume {
+  basics?: JsonResumeBasics;
+  work?: JsonResumeWork[];
+  education?: JsonResumeEducation[];
+  skills?: JsonResumeSkill[];
+  projects?: JsonResumeProject[];
+  [key: string]: any;
 }
 
 export interface ResumeVersion {
   id: string;
   label: string; // 'base', 'backend', 'ai-ml'
-  json_resume: Record<string, any>;
+  json_resume: JsonResume;
   created_at: string;
   updated_at: string;
+}
+
+export interface AtsTip {
+  priority: 'hi' | 'me' | 'lo';
+  text: string;
+}
+
+export interface AtsCategoryScore {
+  key: string;
+  score: number;
+  max: number;
+  tips: AtsTip[];
+}
+
+export interface AtsKeywordAnalysis {
+  pct: number;
+  hit: string[];
+  miss: string[];
+}
+
+export interface AtsAnalysisResult {
+  totalScore: number;
+  categories: AtsCategoryScore[];
+  keywordAnalysis: AtsKeywordAnalysis | null;
+  wordCount: number;
+  actionVerbsFound: string[];
+  quantifiedCount: number;
+}
+
+export interface SuggestedRewrite {
+  originalBullet: string;
+  suggestedBullet: string;
+  jdKeywordsAddressed: string[];
+}
+
+export interface TailorResponse {
+  matchScore: number;
+  missingKeywords: string[];
+  suggestedRewrites: SuggestedRewrite[];
+  gaps: string[];
 }
 
 export interface WatchlistItem {

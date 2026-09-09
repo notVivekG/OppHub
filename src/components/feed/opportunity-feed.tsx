@@ -182,26 +182,6 @@ export function OpportunityFeed() {
         </div>
       )}
 
-      {/* Category Pipeline Note */}
-      {selectedType === 'hackathon' && (
-        <div className="flex items-center space-x-2.5 p-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-indigo-200 text-xs">
-          <Terminal className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-          <div>
-            <span className="font-semibold text-indigo-300">⚡ Hackathons Pipeline (Scheduled for Phase 4): </span>
-            Automated aggregation from 9 hackathon platforms (Devpost, MLH, Unstop, Devfolio, HackerEarth, etc.) via our adapted <code className="text-indigo-300 font-mono">hackathon-api</code> engine launches in Phase 4. Sample collegiate hackathons are displayed below.
-          </div>
-        </div>
-      )}
-
-      {selectedType === 'contribution' && (
-        <div className="flex items-center space-x-2.5 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 text-xs">
-          <Code2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-          <div>
-            <span className="font-semibold text-emerald-300">⚡ Good First Issue Radar (Scheduled for Phase 4): </span>
-            Live queries against GitHub Search API for open-source beginner issues filtered by your watched languages (TypeScript, Python, Go, Rust) launch in Phase 4. Sample issues are displayed below.
-          </div>
-        </div>
-      )}
 
       {/* Filter and Control Bar */}
       <div className="bg-card/70 border border-border/80 rounded-xl p-4 shadow-sm backdrop-blur-sm space-y-4">
@@ -317,14 +297,16 @@ export function OpportunityFeed() {
           <AlertCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground opacity-50" />
           <h3 className="text-sm font-semibold text-foreground">
             {selectedType === 'hackathon'
-              ? 'Live Hackathon Feeds Launching in Phase 4'
+              ? 'No Hackathons Match Your Filters'
               : selectedType === 'contribution'
-              ? 'Good First Issue Radar Launching in Phase 4'
+              ? 'No Good First Issues Match Your Filters'
               : 'No opportunities match your current filters'}
           </h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            {selectedType === 'hackathon' || selectedType === 'contribution'
-              ? 'Automated scheduled scrapers for this category will be wired in Phase 4. Reset filters to view all active internship postings.'
+            {selectedType === 'hackathon'
+              ? 'No upcoming hackathons match your active filters. Try adjusting your query or run npm run ingest:hackathons to fetch live listings.'
+              : selectedType === 'contribution'
+              ? 'No open beginner issues match your active filters. Try adjusting keywords or run npm run ingest:issues to refresh the GitHub radar.'
               : 'Try resetting your search query or toggling non-remote opportunities.'}
           </p>
           <button
@@ -411,16 +393,21 @@ export function OpportunityFeed() {
                     {opp.title}
                   </h3>
 
-                  {/* Location & Compensation */}
+                  {/* Location, Compensation & Metadata */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                     <span className="flex items-center space-x-1">
                       <MapPin className="w-3 h-3 text-muted-foreground/70" />
                       <span className="truncate max-w-[180px]">{opp.location || 'Multiple Locations'}</span>
                     </span>
-                    {opp.stipend && (
+                    {(opp.stipend || opp.metadata?.prize_pool) && (
                       <span className="flex items-center space-x-1 text-emerald-400 font-medium">
                         <DollarSign className="w-3 h-3" />
-                        <span>{opp.stipend}</span>
+                        <span>{opp.metadata?.prize_pool ? `Prize: ${opp.metadata.prize_pool}` : opp.stipend}</span>
+                      </span>
+                    )}
+                    {opp.type === 'contribution' && opp.metadata?.issue_number && (
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        #{opp.metadata.issue_number}
                       </span>
                     )}
                   </div>
@@ -477,7 +464,9 @@ export function OpportunityFeed() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center space-x-1 px-3 py-1 rounded text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors shadow-sm"
                     >
-                      <span>Apply</span>
+                      <span>
+                        {opp.type === 'contribution' ? 'Contribute' : opp.type === 'hackathon' ? 'Register' : 'Apply'}
+                      </span>
                       <ExternalLink className="w-3 h-3 ml-0.5" />
                     </a>
                   </div>
@@ -490,7 +479,7 @@ export function OpportunityFeed() {
         /* DENSE TABLE VIEW */
         <div className="rounded-xl border border-border bg-card/90 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[760px] text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground">
                   <th className="py-2.5 px-3 font-semibold">Company</th>
@@ -586,7 +575,9 @@ export function OpportunityFeed() {
                             rel="noopener noreferrer"
                             className="inline-flex items-center space-x-1 px-2.5 py-0.8 rounded text-[11px] font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors"
                           >
-                            <span>Apply</span>
+                            <span>
+                              {opp.type === 'contribution' ? 'Contribute' : opp.type === 'hackathon' ? 'Register' : 'Apply'}
+                            </span>
                             <ExternalLink className="w-2.5 h-2.5 ml-0.5" />
                           </a>
                         </div>

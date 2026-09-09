@@ -81,6 +81,7 @@ export function ApplicationModal({
       notes,
       follow_up_date: followUpDate ? new Date(followUpDate).toISOString() : null,
       recruiter_contact: recruiterContact,
+      status_changed_at: previousStatus !== status ? new Date().toISOString() : application.status_changed_at,
       updated_at: new Date().toISOString(),
     };
 
@@ -106,9 +107,9 @@ export function ApplicationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-5 border-b border-border/80 bg-muted/20">
+        <div className="flex items-start justify-between p-5 border-b border-border/80 bg-muted/20 flex-shrink-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <h2 className="text-base font-bold text-foreground">
@@ -140,7 +141,7 @@ export function ApplicationModal({
         </div>
 
         {/* Modal Form Body */}
-        <form onSubmit={handleSave} className="p-5 space-y-4 text-xs">
+        <form onSubmit={handleSave} className="p-5 space-y-4 text-xs overflow-y-auto">
           {/* Status Selector */}
           <div>
             <label className="block font-medium text-muted-foreground mb-1.5">

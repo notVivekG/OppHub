@@ -13,7 +13,9 @@ import {
   Moon, 
   Database,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Menu,
+  X
 } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { NotificationCenter } from '@/components/notifications/notification-center';
@@ -23,16 +25,22 @@ export function Navbar() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const [isConfigured, setIsConfigured] = React.useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     setIsConfigured(isSupabaseConfigured());
   }, []);
 
+  // Close mobile menu on route change
+  React.useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   const navLinks = [
     { href: '/', label: 'Opportunity Feed', icon: Compass },
     { href: '/applications', label: 'Pipeline (Kanban)', icon: KanbanSquare },
-    { href: '/resumes', label: 'Resume Tailor', icon: FileText, badge: 'Phase 3' },
-    { href: '/analytics', label: 'Analytics', icon: BarChart3, badge: 'Phase 3' },
+    { href: '/resumes', label: 'Resume Workspace', icon: FileText },
+    { href: '/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -50,7 +58,7 @@ export function Navbar() {
             </span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
@@ -67,11 +75,6 @@ export function Navbar() {
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{link.label}</span>
-                  {link.badge && (
-                    <span className="ml-1 text-[9px] px-1.5 py-0.2 rounded font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                      {link.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -80,7 +83,7 @@ export function Navbar() {
 
         {/* Right side controls */}
         <div className="flex items-center space-x-2.5">
-          {/* Supabase Status Pill */}
+          {/* Supabase Status Pill (Desktop) */}
           <div className="hidden sm:flex items-center">
             {isConfigured ? (
               <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -123,8 +126,72 @@ export function Navbar() {
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Sign In</span>
           </Link>
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg bg-card/60 hover:bg-card border border-border/80 text-foreground transition-colors focus:outline-none"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Collapsible Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border/80 bg-card/95 backdrop-blur-md px-4 py-3 space-y-2 animate-in slide-in-from-top-2 duration-150 shadow-xl">
+          {/* Supabase Status on Mobile */}
+          <div className="pb-2 border-b border-border/60 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Database Status:</span>
+            {isConfigured ? (
+              <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Supabase Live</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span>Demo Mode</span>
+              </div>
+            )}
+          </div>
+
+          <nav className="flex flex-col space-y-1">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="pt-2 border-t border-border/60">
+            <Link
+              href="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full flex items-center justify-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Sign In to OppHub</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

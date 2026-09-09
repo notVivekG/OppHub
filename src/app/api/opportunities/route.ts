@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         // Compute scoring for each item
         const scored = data.map((item: any) => {
           const breakdown = calculatePriorityScore({
+            type: item.type,
             matchScore: item.match_score || 75,
             deadline: item.deadline,
             remote: item.remote,
@@ -85,6 +86,7 @@ export async function GET(request: NextRequest) {
       // Label as demo items & compute priority scores
       items = items.map((item) => {
         const breakdown = calculatePriorityScore({
+          type: item.type,
           matchScore: item.match_score || 75,
           deadline: item.deadline,
           remote: item.remote,

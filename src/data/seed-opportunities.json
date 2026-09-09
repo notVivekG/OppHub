@@ -1002,5 +1002,232 @@
     "priority_score": null,
     "raw_snippet": "Apex - Ground Software Intern - Spring or Summer 2027 (LA)",
     "status": "new"
+  },
+  {
+    "id": "opp-hack-devpost-10a992795054c05c",
+    "source": "hackathon-api",
+    "type": "hackathon",
+    "company": "Devpost",
+    "title": "RevenueCat Shipaton 2026",
+    "url": "https://revenuecat-shipaton-2026.devpost.com/",
+    "location": "Online",
+    "remote": true,
+    "tech_stack": [],
+    "stipend": "Prizes: $740,000",
+    "date_discovered": "2026-09-09T13:34:33.485Z",
+    "deadline": "2026-09-30T18:30:00.000Z",
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "RevenueCat Shipaton 2026 on Devpost (Online)",
+    "status": "new",
+    "metadata": {
+      "platform": "devpost",
+      "prize_pool": "$740,000",
+      "mode": "online",
+      "submission_period": "Jul 31 - Oct 01, 2026"
+    }
+  },
+  {
+    "id": "opp-hack-devpost-1948e1f4f42100c2",
+    "source": "hackathon-api",
+    "type": "hackathon",
+    "company": "Devpost",
+    "title": "Agentic Cinema: The Blockbuster Hackathon",
+    "url": "https://agentic-cinema.devpost.com/",
+    "location": "Online",
+    "remote": true,
+    "tech_stack": [],
+    "stipend": "Prizes: $75,000",
+    "date_discovered": "2026-09-09T13:34:33.486Z",
+    "deadline": "2026-09-08T18:30:00.000Z",
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "Agentic Cinema: The Blockbuster Hackathon on Devpost (Online)",
+    "status": "new",
+    "metadata": {
+      "platform": "devpost",
+      "prize_pool": "$75,000",
+      "mode": "online",
+      "submission_period": "Jul 27 - Sep 09, 2026"
+    }
+  },
+  {
+    "id": "opp-hack-devpost-9399c0ede3e91972",
+    "source": "hackathon-api",
+    "type": "hackathon",
+    "company": "Devpost",
+    "title": "Agents for Humans Hackathon",
+    "url": "https://agentsforhumans.devpost.com/",
+    "location": "Online",
+    "remote": true,
+    "tech_stack": [],
+    "stipend": "Prizes: $40,000",
+    "date_discovered": "2026-09-09T13:34:33.486Z",
+    "deadline": "2026-09-13T18:30:00.000Z",
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "Agents for Humans Hackathon on Devpost (Online)",
+    "status": "new",
+    "metadata": {
+      "platform": "devpost",
+      "prize_pool": "$40,000",
+      "mode": "online",
+      "submission_period": "Aug 10 - Sep 14, 2026"
+    }
+  },
+  {
+    "id": "opp-hack-devpost-ec990578219ff1c7",
+    "source": "hackathon-api",
+    "type": "hackathon",
+    "company": "Devpost",
+    "title": "Build, Ship, Shape: Amazon Developer Hackathon",
+    "url": "https://amazonappdev2026.devpost.com/",
+    "location": "Online",
+    "remote": true,
+    "tech_stack": [],
+    "stipend": "Prizes: $138,000",
+    "date_discovered": "2026-09-09T13:34:33.486Z",
+    "deadline": "2026-10-22T18:30:00.000Z",
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "Build, Ship, Shape: Amazon Developer Hackathon on Devpost (Online)",
+    "status": "new",
+    "metadata": {
+      "platform": "devpost",
+      "prize_pool": "$138,000",
+      "mode": "online",
+      "submission_period": "Aug 31 - Oct 23, 2026"
+    }
+  },
+  {
+    "id": "opp-hack-devpost-0356467f26e971a8",
+    "source": "hackathon-api",
+    "type": "hackathon",
+    "company": "Devpost",
+    "title": "Nebius x NVIDIA Global AI Hackathon",
+    "url": "https://nebiusglobalaihackathon.devpost.com/",
+    "location": "Online",
+    "remote": true,
+    "tech_stack": [
+      "ai"
+    ],
+    "stipend": "Prizes: $50,000",
+    "date_discovered": "2026-09-09T13:34:33.486Z",
+    "deadline": "2026-10-29T18:30:00.000Z",
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "Nebius x NVIDIA Global AI Hackathon on Devpost (Online)",
+    "status": "new",
+    "metadata": {
+      "platform": "devpost",
+      "prize_pool": "$50,000",
+      "mode": "online",
+      "submission_period": "Aug 26 - Oct 30, 2026"
+    }
+  },
+  {
+    "id": "opp-issue-00f0886859012e97",
+    "source": "github-search",
+    "type": "contribution",
+    "company": "libredb/libredb-studio",
+    "title": "Root page's meta description still names four engines out of sixteen",
+    "url": "https://github.com/libredb/libredb-studio/issues/675",
+    "location": "Remote",
+    "remote": true,
+    "tech_stack": [
+      "typescript",
+      "bug",
+      "good first issue",
+      "hacktoberfest"
+    ],
+    "stipend": null,
+    "date_discovered": "2026-09-08T17:53:41Z",
+    "deadline": null,
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "libredb/libredb-studio #675: Root page's meta description still names four engines out of sixteen",
+    "status": "new",
+    "metadata": {
+      "issue_number": 675,
+      "repo_full_name": "libredb/libredb-studio",
+      "labels": [
+        "bug",
+        "good first issue",
+        "hacktoberfest"
+      ],
+      "comments_count": 1,
+      "author": "kaya-abdullah",
+      "github_updated_at": "2026-09-09T13:24:08Z"
+    }
+  },
+  {
+    "id": "opp-issue-a4c9b343270cba34",
+    "source": "github-search",
+    "type": "contribution",
+    "company": "libredb/libredb-studio",
+    "title": "CONTRIBUTING.md does not say how to keep a branch current, and three repo-specific traps depend on it",
+    "url": "https://github.com/libredb/libredb-studio/issues/734",
+    "location": "Remote",
+    "remote": true,
+    "tech_stack": [
+      "typescript",
+      "documentation",
+      "good first issue",
+      "hacktoberfest"
+    ],
+    "stipend": null,
+    "date_discovered": "2026-09-09T13:23:48Z",
+    "deadline": null,
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "libredb/libredb-studio #734: CONTRIBUTING.md does not say how to keep a branch current, and three repo-specific traps depend on it",
+    "status": "new",
+    "metadata": {
+      "issue_number": 734,
+      "repo_full_name": "libredb/libredb-studio",
+      "labels": [
+        "documentation",
+        "good first issue",
+        "hacktoberfest"
+      ],
+      "comments_count": 0,
+      "author": "cevheri",
+      "github_updated_at": "2026-09-09T13:23:48Z"
+    }
+  },
+  {
+    "id": "opp-issue-f171d67925433f30",
+    "source": "github-search",
+    "type": "contribution",
+    "company": "iyanuBoii/scavenger-hunt-backend",
+    "title": "Add request logging middleware for incoming API calls",
+    "url": "https://github.com/iyanuBoii/scavenger-hunt-backend/issues/198",
+    "location": "Remote",
+    "remote": true,
+    "tech_stack": [
+      "typescript",
+      "enhancement",
+      "good first issue",
+      "backend"
+    ],
+    "stipend": null,
+    "date_discovered": "2026-09-09T13:23:35Z",
+    "deadline": null,
+    "match_score": null,
+    "priority_score": null,
+    "raw_snippet": "iyanuBoii/scavenger-hunt-backend #198: Add request logging middleware for incoming API calls",
+    "status": "new",
+    "metadata": {
+      "issue_number": 198,
+      "repo_full_name": "iyanuBoii/scavenger-hunt-backend",
+      "labels": [
+        "enhancement",
+        "good first issue",
+        "Backend"
+      ],
+      "comments_count": 0,
+      "author": "michaelsimeon001",
+      "github_updated_at": "2026-09-09T13:23:35Z"
+    }
   }
 ]

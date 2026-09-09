@@ -30,13 +30,15 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     if (supabase) {
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('applications')
         .insert({
           opportunity_id: body.opportunity_id,
           resume_version_id: body.resume_version_id || null,
           status: body.status || 'applied',
-          date_applied: body.date_applied || new Date().toISOString(),
+          date_applied: body.date_applied || now,
+          status_changed_at: now,
           follow_up_date: body.follow_up_date || null,
           recruiter_contact: body.recruiter_contact || null,
           notes: body.notes || null,
@@ -65,12 +67,17 @@ export async function PATCH(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     if (supabase && id) {
+      const updatePayload: any = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      if (updates.status) {
+        updatePayload.status_changed_at = new Date().toISOString();
+      }
+
       const { data, error } = await supabase
         .from('applications')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', id)
         .select(`*, opportunity:opportunities(*)`)
         .single();

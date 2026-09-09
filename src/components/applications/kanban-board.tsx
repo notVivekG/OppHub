@@ -146,9 +146,10 @@ export function KanbanBoard({ initialApplications }: KanbanBoardProps) {
       });
     }
 
+    const now = new Date().toISOString();
     const updated = applications.map((a) =>
       a.id === appId
-        ? { ...a, status: targetStatus, updated_at: new Date().toISOString() }
+        ? { ...a, status: targetStatus, status_changed_at: now, updated_at: now }
         : a
     );
 
@@ -178,9 +179,10 @@ export function KanbanBoard({ initialApplications }: KanbanBoardProps) {
       });
     }
 
+    const now = new Date().toISOString();
     const updated = applications.map((a) =>
       a.id === app.id
-        ? { ...a, status: nextStatus, updated_at: new Date().toISOString() }
+        ? { ...a, status: nextStatus, status_changed_at: now, updated_at: now }
         : a
     );
     persistApplications(updated);
@@ -278,8 +280,8 @@ export function KanbanBoard({ initialApplications }: KanbanBoardProps) {
         </div>
       </div>
 
-      {/* Kanban Board Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 overflow-x-auto pb-4">
+      {/* Kanban Board Columns: Horizontal snap-swipe on mobile, standard responsive grid on desktop */}
+      <div className="flex md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth">
         {COLUMNS.map((col) => {
           const colApps = filtered.filter((a) => a.status === col.id);
           const isOver = dragOverCol === col.id;
@@ -290,7 +292,7 @@ export function KanbanBoard({ initialApplications }: KanbanBoardProps) {
               onDragOver={(e) => handleDragOver(e, col.id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, col.id)}
-              className={`rounded-xl border ${col.color} p-3 flex flex-col min-h-[480px] transition-all ${
+              className={`min-w-[280px] sm:min-w-[320px] md:min-w-0 snap-center rounded-xl border ${col.color} p-3 flex flex-col min-h-[480px] transition-all flex-shrink-0 md:flex-shrink ${
                 isOver ? 'ring-2 ring-primary/60 scale-[1.01]' : ''
               }`}
             >

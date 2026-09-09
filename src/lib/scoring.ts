@@ -1,6 +1,7 @@
-import { EligibilityRules } from '@/types';
+import { EligibilityRules, OpportunityType } from '@/types';
 
 export interface ScoringInputs {
+  type?: OpportunityType;
   matchScore?: number | null; // 0 - 100
   deadline?: string | null;
   remote?: boolean;
@@ -33,6 +34,7 @@ export interface ScoreBreakdown {
  */
 export function calculatePriorityScore(inputs: ScoringInputs): ScoreBreakdown {
   const {
+    type = 'internship',
     matchScore = 75,
     deadline,
     remote = false,
@@ -50,7 +52,11 @@ export function calculatePriorityScore(inputs: ScoringInputs): ScoreBreakdown {
   let daysToDeadline: number | null = null;
   let urgencyFactor = 0.4; // default baseline when no deadline is set (ongoing)
 
-  if (deadline) {
+  // Explicit guard: for open-source contributions with deadline = null,
+  // urgency resolves to 0 (neutral — no urgency boost, no crash)
+  if (type === 'contribution' && !deadline) {
+    urgencyFactor = 0;
+  } else if (deadline) {
     const target = new Date(deadline).getTime();
     const now = Date.now();
     const diffDays = Math.max(1, Math.ceil((target - now) / (1000 * 60 * 60 * 24)));
@@ -64,11 +70,24 @@ export function calculatePriorityScore(inputs: ScoringInputs): ScoreBreakdown {
   const urgencyComponent = 0.20 * urgencyFactor * 100;
 
   // 3. Eligibility Gate (0.15 weight)
+  // Rules like remote-only, graduation year, and sponsorship are meaningful for internships,
+  // while contributions bypass remote-only entirely (open-source issues have no location).
+  // Hackathons bypass grad-years and visa sponsorship, but STILL check remote-only against their real location/remote data.
   let eligibilityPass = true;
   if (eligibilityRules) {
-    // If remote only rule is enforced but role is not remote
-    if (eligibilityRules.remoteOnly && !remote) {
-      eligibilityPass = false;
+    if (type === 'contribution') {
+      // Contributions bypass remote-only and employment rules
+      eligibilityPass = true;
+    } else if (type === 'hackathon') {
+      // Hackathons enforce remoteOnly if user specified remoteOnly, but bypass grad years and sponsorship
+      if (eligibilityRules.remoteOnly && !remote) {
+        eligibilityPass = false;
+      }
+    } else {
+      // Internships enforce remoteOnly
+      if (eligibilityRules.remoteOnly && !remote) {
+        eligibilityPass = false;
+      }
     }
   }
 
@@ -77,7 +96,7 @@ export function calculatePriorityScore(inputs: ScoringInputs): ScoreBreakdown {
 
   // 4. Location Fit Score (0.15 weight)
   let locationFitScore = 50; // default neutral
-  if (remote) {
+  if (type === 'contribution' || remote) {
     locationFitScore = 100;
   } else if (eligibilityRules?.preferredLocations && eligibilityRules.preferredLocations.length > 0) {
     const locLower = (location || '').toLowerCase();

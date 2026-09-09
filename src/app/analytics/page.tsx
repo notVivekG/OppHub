@@ -2,25 +2,102 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { BarChart3, ArrowLeft, Globe, UserCheck, TrendingUp, Calendar, Zap } from 'lucide-react';
+import { BarChart3, ArrowLeft, Globe, UserCheck, Loader2 } from 'lucide-react';
+import { Opportunity, Application, ResumeVersion } from '@/types';
+import { MarketInsights } from '@/components/analytics/market-insights';
+import { ProgressAnalytics } from '@/components/analytics/progress-analytics';
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = React.useState<'market' | 'progress'>('market');
+  const [loading, setLoading] = React.useState(true);
+
+  // Data states
+  const [opportunities, setOpportunities] = React.useState<Opportunity[]>([]);
+  const [applications, setApplications] = React.useState<Application[]>([]);
+  const [resumeVersions, setResumeVersions] = React.useState<ResumeVersion[]>([]);
+  const [isDemo, setIsDemo] = React.useState(false);
+
+  React.useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+
+      // 1. Fetch Opportunities
+      try {
+        const oppRes = await fetch('/api/opportunities?sort=discovered');
+        if (oppRes.ok) {
+          const oppData = await oppRes.json();
+          if (oppData.opportunities) {
+            setOpportunities(oppData.opportunities);
+            setIsDemo(oppData.isDemo ?? false);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load opportunities for analytics:', err);
+      }
+
+      // 2. Fetch Applications
+      try {
+        const appRes = await fetch('/api/applications');
+        if (appRes.ok) {
+          const appData = await appRes.json();
+          if (appData.applications && appData.applications.length > 0) {
+            setApplications(appData.applications);
+          } else {
+            // LocalStorage fallback
+            const savedApps = localStorage.getItem('opphub-applications');
+            if (savedApps) {
+              setApplications(JSON.parse(savedApps));
+            }
+          }
+        }
+      } catch (err) {
+        const savedApps = localStorage.getItem('opphub-applications');
+        if (savedApps) {
+          try {
+            setApplications(JSON.parse(savedApps));
+          } catch {}
+        }
+      }
+
+      // 3. Fetch Resume Versions
+      try {
+        const resRes = await fetch('/api/resumes');
+        if (resRes.ok) {
+          const resData = await resRes.json();
+          if (resData.resumes) {
+            setResumeVersions(resData.resumes);
+          }
+        }
+      } catch (err) {
+        const savedRes = localStorage.getItem('opphub-resume-versions');
+        if (savedRes) {
+          try {
+            setResumeVersions(JSON.parse(savedRes));
+          } catch {}
+        }
+      }
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
 
   return (
     <div className="space-y-6">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
         <div>
           <div className="flex items-center space-x-2">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Analytics Hub
             </h1>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              Phase 3 Preview
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Phase 3 Active
             </span>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Strictly segregated views: aggregate market data vs. your personal application funnel.
+            Strictly segregated views: aggregate industry market intelligence vs. personal pipeline performance.
           </p>
         </div>
 
@@ -33,7 +110,7 @@ export default function AnalyticsPage() {
         </Link>
       </div>
 
-      {/* Dual Tab Switcher with Visual Separation */}
+      {/* Dual Tab Switcher with Visual Segregation */}
       <div className="flex items-center space-x-2 border-b border-border/80 pb-2">
         <button
           onClick={() => setActiveTab('market')}
@@ -44,7 +121,7 @@ export default function AnalyticsPage() {
           }`}
         >
           <Globe className="w-4 h-4 text-cyan-400" />
-          <span>Market Insights (Aggregate Data)</span>
+          <span>Market Insights (Aggregate Market Data)</span>
         </button>
 
         <button
@@ -56,59 +133,20 @@ export default function AnalyticsPage() {
           }`}
         >
           <UserCheck className="w-4 h-4 text-purple-400" />
-          <span>My Progress (Personal Pipeline)</span>
+          <span>My Progress (Personal Funnel)</span>
         </button>
       </div>
 
-      {/* Tab Contents Preview */}
-      {activeTab === 'market' ? (
-        <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/5 p-6 space-y-4">
-          <div className="flex items-center space-x-2 text-cyan-400 font-semibold text-sm">
-            <Globe className="w-4 h-4" />
-            <span>Market Dynamics & Industry Postings</span>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Market Insights provides aggregate industry intelligence: weekly internship volume, trending keywords across job descriptions, deadline distributions, and hackathon heatmaps.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-lg border border-cyan-500/20 bg-card/60">
-              <div className="text-[11px] text-cyan-400 font-medium">Trending Keyword</div>
-              <div className="text-base font-bold text-foreground mt-1">AI / ML (+42%)</div>
-            </div>
-            <div className="p-4 rounded-lg border border-cyan-500/20 bg-card/60">
-              <div className="text-[11px] text-cyan-400 font-medium">Total Open Roles</div>
-              <div className="text-base font-bold text-foreground mt-1">1,180+ Tracked</div>
-            </div>
-            <div className="p-4 rounded-lg border border-cyan-500/20 bg-card/60">
-              <div className="text-[11px] text-cyan-400 font-medium">Deadlines in &lt;14 Days</div>
-              <div className="text-base font-bold text-foreground mt-1">38 Listings</div>
-            </div>
-          </div>
+      {/* Loading Skeleton */}
+      {loading ? (
+        <div className="h-64 rounded-xl border border-border bg-card/40 flex items-center justify-center space-x-2 text-muted-foreground text-xs">
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span>Loading Analytics Data...</span>
         </div>
+      ) : activeTab === 'market' ? (
+        <MarketInsights opportunities={opportunities} isDemo={isDemo} />
       ) : (
-        <div className="rounded-xl border border-purple-500/20 bg-purple-950/5 p-6 space-y-4">
-          <div className="flex items-center space-x-2 text-purple-400 font-semibold text-sm">
-            <UserCheck className="w-4 h-4" />
-            <span>Personal Application Performance</span>
-          </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            My Progress focuses solely on your personal funnel: response rates by resume version, conversion from applied to OA to interview, and upcoming follow-ups.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-            <div className="p-4 rounded-lg border border-purple-500/20 bg-card/60">
-              <div className="text-[11px] text-purple-400 font-medium">Applications Logged</div>
-              <div className="text-base font-bold text-foreground mt-1">Ready in Phase 2</div>
-            </div>
-            <div className="p-4 rounded-lg border border-purple-500/20 bg-card/60">
-              <div className="text-[11px] text-purple-400 font-medium">Funnel Conversion</div>
-              <div className="text-base font-bold text-foreground mt-1">Live in Phase 3</div>
-            </div>
-            <div className="p-4 rounded-lg border border-purple-500/20 bg-card/60">
-              <div className="text-[11px] text-purple-400 font-medium">Best Resume Variant</div>
-              <div className="text-base font-bold text-foreground mt-1">Base vs AI-ML</div>
-            </div>
-          </div>
-        </div>
+        <ProgressAnalytics applications={applications} resumeVersions={resumeVersions} />
       )}
     </div>
   );

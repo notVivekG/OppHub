@@ -334,7 +334,10 @@ async function run() {
 
   if (!isDryRun && supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
     console.log(`🔌 Connecting to Supabase (${supabaseUrl})...`);
-    const supabase = createClient(supabaseUrl, secretKey);
+    const supabase = createClient(supabaseUrl, secretKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: typeof WebSocket !== 'undefined' ? undefined : { transport: class {} },
+    });
 
     // Upsert in batches of 50
     const batchSize = 50;
