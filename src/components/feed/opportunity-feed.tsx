@@ -36,6 +36,7 @@ export function OpportunityFeed() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState<string>('all');
   const [remoteOnly, setRemoteOnly] = React.useState(false);
+  const [showExpired, setShowExpired] = React.useState(false);
   const [sortBy, setSortBy] = React.useState<'discovered' | 'priority' | 'deadline'>('discovered');
   const [viewMode, setViewMode] = React.useState<'table' | 'grid'>('grid');
   const [savedIds, setSavedIds] = React.useState<Set<string>>(new Set());
@@ -49,6 +50,7 @@ export function OpportunityFeed() {
       const params = new URLSearchParams();
       if (selectedType !== 'all') params.set('type', selectedType);
       if (remoteOnly) params.set('remote', 'true');
+      if (showExpired) params.set('show_expired', 'true');
       if (searchQuery) params.set('q', searchQuery);
       params.set('sort', sortBy);
 
@@ -62,7 +64,7 @@ export function OpportunityFeed() {
     } finally {
       setLoading(false);
     }
-  }, [selectedType, remoteOnly, searchQuery, sortBy]);
+  }, [selectedType, remoteOnly, showExpired, searchQuery, sortBy]);
 
   React.useEffect(() => {
     fetchOpportunities();
@@ -229,6 +231,20 @@ export function OpportunityFeed() {
               <span>🌐 Remote Only</span>
             </button>
 
+            {/* Show Expired Toggle */}
+            <button
+              onClick={() => setShowExpired(!showExpired)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                showExpired
+                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
+                  : 'bg-background border-border text-muted-foreground hover:text-foreground'
+              }`}
+              title="Toggle visibility of opportunities with past deadlines"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{showExpired ? 'Showing Expired' : 'Hide Expired'}</span>
+            </button>
+
             {/* Sort Dropdown */}
             <select
               value={sortBy}
@@ -348,6 +364,11 @@ export function OpportunityFeed() {
                               Demo Data
                             </span>
                           )}
+                          {opp.is_expired && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                              Expired
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2 text-[11px] text-muted-foreground">
                           <span>{getTypeBadge(opp.type)}</span>
@@ -436,7 +457,9 @@ export function OpportunityFeed() {
                 <div className="pt-3 border-t border-border/50 flex items-center justify-between">
                   <div className="text-[10px] text-muted-foreground flex items-center space-x-1">
                     <Clock className="w-3 h-3" />
-                    {daysLeft !== null ? (
+                    {opp.is_expired ? (
+                      <span className="text-rose-400 font-medium">Expired ({formatDate(opp.deadline)})</span>
+                    ) : daysLeft !== null ? (
                       <span className={daysLeft <= 7 ? 'text-rose-400 font-medium' : ''}>
                         {daysLeft <= 0 ? 'Closes today' : `${daysLeft}d left`}
                       </span>
@@ -510,7 +533,14 @@ export function OpportunityFeed() {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-foreground font-normal">
-                        <div className="max-w-[260px] truncate">{opp.title}</div>
+                        <div className="max-w-[260px] truncate flex items-center">
+                          <span className="truncate">{opp.title}</span>
+                          {opp.is_expired && (
+                            <span className="ml-1.5 px-1.5 py-0.2 rounded text-[8px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 whitespace-nowrap">
+                              EXPIRED
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap">{getTypeBadge(opp.type)}</td>
                       <td className="py-3 px-3 whitespace-nowrap font-mono text-xs font-semibold">
@@ -548,7 +578,9 @@ export function OpportunityFeed() {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-muted-foreground whitespace-nowrap">
-                        {daysLeft !== null ? (
+                        {opp.is_expired ? (
+                          <span className="text-rose-400 font-medium">Expired</span>
+                        ) : daysLeft !== null ? (
                           <span className={daysLeft <= 7 ? 'text-rose-400 font-medium' : ''}>
                             {daysLeft <= 0 ? 'Today' : `${daysLeft}d`}
                           </span>

@@ -19,6 +19,7 @@ export interface Opportunity {
   raw_snippet?: string | null;
   status: OpportunityStatus;
   metadata?: Record<string, any> | null;
+  is_expired?: boolean;
 }
 
 export type ApplicationStatus =

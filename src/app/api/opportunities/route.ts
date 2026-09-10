@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const remote = searchParams.get('remote');
   const query = searchParams.get('q')?.toLowerCase();
   const sort = searchParams.get('sort') || 'discovered';
+  const showExpired = searchParams.get('show_expired') === 'true';
 
   const supabase = getSupabaseAdmin();
 
@@ -32,8 +33,8 @@ export async function GET(request: NextRequest) {
       const { data, error } = await queryBuilder.limit(150);
 
       if (!error && data && data.length > 0) {
-        // Compute scoring for each item
-        const scored = data.map((item: any) => {
+        // Compute scoring and expiration for each item
+        let scored = data.map((item: any) => {
           const breakdown = calculatePriorityScore({
             type: item.type,
             matchScore: item.match_score || 75,
@@ -43,12 +44,24 @@ export async function GET(request: NextRequest) {
             company: item.company,
             title: item.title,
           });
+
+          // An opportunity is expired if its deadline has passed and it is not an open-ended contribution
+          const isExpired = item.type !== 'contribution' &&
+            Boolean(item.deadline) &&
+            new Date(item.deadline).getTime() < Date.now();
+
           return {
             ...item,
             priority_score: item.priority_score || breakdown.finalScore,
             score_breakdown: breakdown,
+            is_expired: isExpired,
           };
         });
+
+        // Filter expired items out of default view unless explicitly requested
+        if (!showExpired) {
+          scored = scored.filter((item: any) => !item.is_expired);
+        }
 
         if (sort === 'priority') {
           scored.sort((a: any, b: any) => (b.priority_score || 0) - (a.priority_score || 0));
@@ -83,7 +96,7 @@ export async function GET(request: NextRequest) {
       const fileContent = fs.readFileSync(seedPath, 'utf8');
       let items: (Opportunity & { isDemo?: boolean; score_breakdown?: any })[] = JSON.parse(fileContent);
 
-      // Label as demo items & compute priority scores
+      // Label as demo items & compute priority scores + expiration
       items = items.map((item) => {
         const breakdown = calculatePriorityScore({
           type: item.type,
@@ -94,10 +107,17 @@ export async function GET(request: NextRequest) {
           company: item.company,
           title: item.title,
         });
+
+        // An opportunity is expired if its deadline has passed and it is not an open-ended contribution
+        const isExpired = item.type !== 'contribution' &&
+          Boolean(item.deadline) &&
+          new Date(item.deadline).getTime() < Date.now();
+
         return {
           ...item,
           priority_score: item.priority_score || breakdown.finalScore,
           score_breakdown: breakdown,
+          is_expired: isExpired,
           isDemo: true,
         };
       });
@@ -117,6 +137,11 @@ export async function GET(request: NextRequest) {
             (o.location && o.location.toLowerCase().includes(query)) ||
             (o.tech_stack && o.tech_stack.some((t) => t.toLowerCase().includes(query)))
         );
+      }
+
+      // Filter expired items out of default view unless explicitly requested
+      if (!showExpired) {
+        items = items.filter((o) => !o.is_expired);
       }
 
       // Sort

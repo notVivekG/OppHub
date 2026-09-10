@@ -19,6 +19,11 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import {
+  recordIngestionRun,
+  sendIngestionAlertIfNeeded,
+  evaluateStatus,
+} from './lib/ingestion-telemetry.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +32,28 @@ const DEFAULT_LANGUAGES = ['typescript', 'python', 'go', 'rust'];
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function loadLocalEnv() {
+  const envPath = path.resolve(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const match = trimmed.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let val = match[2].trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if ((key === 'SUPABASE_URL' || key === 'SUPABASE_SECRET_KEY' || key === 'GH_PAT' || key === 'GITHUB_TOKEN') && !process.env[key]) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
 }
 
 // Fetch watched languages from Supabase settings if configured
@@ -58,96 +85,92 @@ async function fetchIssuesForLanguage(language, token, perPage = 25) {
   const url = `https://api.github.com/search/issues?q=${q}&sort=updated&order=desc&per_page=${perPage}`;
 
   const headers = {
-    'User-Agent': 'OppHub-Issue-Radar/1.0',
     'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'OppHub-GoodFirstIssue-Ingest/1.0',
   };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const items = [];
+
   try {
     const res = await fetch(url, { headers });
 
-    // Check rate limit headers
-    const remaining = res.headers.get('x-ratelimit-remaining');
-    const limit = res.headers.get('x-ratelimit-limit');
-    const reset = res.headers.get('x-ratelimit-reset');
-
-    if (remaining !== null) {
-      console.log(`  -> Search API quota: ${remaining}/${limit} requests remaining (resets at ${new Date(Number(reset) * 1000).toLocaleTimeString()})`);
-    }
-
     if (res.status === 403 || res.status === 429) {
-      console.warn(`⚠️ GitHub Search API rate limit reached (HTTP ${res.status}).`);
-      return [];
+      const resetHeader = res.headers.get('x-ratelimit-reset');
+      const resetTime = resetHeader ? new Date(parseInt(resetHeader, 10) * 1000).toLocaleTimeString() : 'soon';
+      console.warn(`⚠️ GitHub Search API rate limit exceeded. Resets at ${resetTime}.`);
+      return items;
     }
 
     if (!res.ok) {
-      console.warn(`⚠️ GitHub Search API returned HTTP ${res.status} for language: ${language}`);
-      return [];
+      console.warn(`⚠️ GitHub API error HTTP ${res.status} for ${language}:`, await res.text());
+      return items;
     }
 
-    const data = await res.json();
-    const items = data.items || [];
-    console.log(`  -> Found ${items.length} open issues for ${language}.`);
+    const json = await res.json();
+    const issueList = json.items || [];
 
-    const results = [];
-    for (const item of items) {
-      // Extract owner/repo from repository_url: https://api.github.com/repos/owner/repo
-      let repoFullName = 'Unknown Repository';
-      if (item.repository_url) {
-        const parts = item.repository_url.split('/repos/');
-        if (parts.length > 1) {
-          repoFullName = parts[1];
+    for (const issue of issueList) {
+      if (!issue.title || !issue.html_url) continue;
+
+      // Extract repo organization/repo from repository_url
+      // Format: https://api.github.com/repos/owner/repo
+      let repoName = 'Open Source Project';
+      if (issue.repository_url) {
+        const parts = issue.repository_url.split('/');
+        if (parts.length >= 2) {
+          repoName = `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
         }
       }
 
       // Collect labels
-      const labelNames = (item.labels || [])
-        .map((l) => (typeof l === 'string' ? l : l.name))
-        .filter(Boolean);
+      const labels = (issue.labels || []).map((l) => (typeof l === 'string' ? l : l.name)).filter(Boolean);
 
-      const id = crypto.createHash('sha256').update(item.html_url).digest('hex').slice(0, 16);
+      // Unique hash for opportunity ID
+      const id = crypto.createHash('sha256').update(issue.html_url).digest('hex').slice(0, 16);
 
-      // Tech stack combines the search language + any relevant label keywords
-      const techStack = Array.from(
-        new Set([language.toLowerCase(), ...labelNames.map((l) => l.toLowerCase()).slice(0, 3)])
-      );
+      // Check comments / assignees
+      const hasAssignee = Boolean(issue.assignee || (issue.assignees && issue.assignees.length > 0));
 
-      results.push({
+      items.push({
         id: `opp-issue-${id}`,
         source: 'github-search',
         type: 'contribution',
-        company: repoFullName, // Repo full name: owner/repo
-        title: item.title,
-        url: item.html_url,
-        location: 'Remote',
+        company: repoName,
+        title: issue.title,
+        url: issue.html_url,
+        location: 'Remote / Async',
         remote: true,
-        tech_stack: techStack,
+        tech_stack: [language.toLowerCase()],
         stipend: null,
-        date_discovered: item.created_at || new Date().toISOString(),
-        deadline: null, // Open source issues do not have application deadlines
+        date_discovered: issue.created_at || new Date().toISOString(),
+        deadline: null, // Open-source issues have no deadline
         match_score: null,
         priority_score: null,
-        raw_snippet: `${repoFullName} #${item.number}: ${item.title}`,
+        raw_snippet: `${issue.title} on ${repoName} (${language}) - #${issue.number}`,
         status: 'new',
         metadata: {
-          issue_number: item.number,
-          repo_full_name: repoFullName,
-          labels: labelNames,
-          comments_count: item.comments || 0,
-          author: item.user?.login || null,
-          github_updated_at: item.updated_at || null,
-        }
+          platform: 'github',
+          language,
+          issue_number: issue.number,
+          comments_count: issue.comments || 0,
+          labels,
+          has_assignee: hasAssignee,
+          state: issue.state,
+          updated_at: issue.updated_at,
+        },
       });
     }
 
-    return results;
+    console.log(`  -> Fetched ${items.length} open issues for ${language}.`);
   } catch (err) {
-    console.error(`❌ Error fetching issues for ${language}:`, err.message);
-    return [];
+    console.warn(`⚠️ Failed searching GitHub for ${language}:`, err.message);
   }
+
+  return items;
 }
 
 // Helper to merge and save with URL deduplication
@@ -177,100 +200,130 @@ function saveWithDeduplication(targetPath, newItems) {
 }
 
 async function run() {
-  const args = process.argv.slice(2);
-  const isDryRun = args.includes('--dry-run');
-  const limitArg = args.find((a) => a.startsWith('--limit='));
-  const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null;
-  const langArg = args.find((a) => a.startsWith('--lang='));
-  const specificLang = langArg ? langArg.split('=')[1] : null;
-  const outputArg = args.find((a) => a.startsWith('--output='));
-  const outputPath = outputArg ? outputArg.split('=')[1] : null;
+  loadLocalEnv();
+  const startedAt = new Date().toISOString();
+  let supabaseClientInstance = null;
+  let collectedCount = 0;
+  let runError = null;
 
-  console.log('🚀 OppHub GitHub Good First Issue Radar Starting...');
+  try {
+    const args = process.argv.slice(2);
+    const isDryRun = args.includes('--dry-run');
+    const limitArg = args.find((a) => a.startsWith('--limit='));
+    const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : null;
+    const langArg = args.find((a) => a.startsWith('--lang='));
+    const specificLang = langArg ? langArg.split('=')[1] : null;
+    const outputArg = args.find((a) => a.startsWith('--output='));
+    const outputPath = outputArg ? outputArg.split('=')[1] : null;
 
-  // Token from GitHub secret or env var
-  const token = process.env.GH_PAT || process.env.GITHUB_TOKEN || null;
-  if (!token) {
-    console.log('ℹ️ Running unauthenticated. Provide GH_PAT or GITHUB_TOKEN for higher 30 req/min limit.');
-  } else {
-    console.log('🔑 Authenticated with GitHub token.');
-  }
+    console.log('🚀 OppHub GitHub Good First Issue Radar Starting...');
 
-  // Supabase client (if available)
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const secretKey = process.env.SUPABASE_SECRET_KEY;
-  let supabase = null;
+    // Token from GitHub secret or env var
+    const token = process.env.GH_PAT || process.env.GITHUB_TOKEN || null;
+    if (!token) {
+      console.log('ℹ️ Running unauthenticated. Provide GH_PAT or GITHUB_TOKEN for higher 30 req/min limit.');
+    } else {
+      console.log('🔑 Authenticated with GitHub token.');
+    }
 
-  if (supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
-    supabase = createClient(supabaseUrl, secretKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      realtime: typeof WebSocket !== 'undefined' ? undefined : { transport: class {} },
+    // Supabase client (if available)
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const secretKey = process.env.SUPABASE_SECRET_KEY;
+    let supabase = null;
+
+    if (supabaseUrl && secretKey && !supabaseUrl.includes('placeholder')) {
+      supabase = createClient(supabaseUrl, secretKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        realtime: typeof WebSocket !== 'undefined' ? undefined : { transport: class {} },
+      });
+      supabaseClientInstance = supabase;
+    }
+
+    const languages = specificLang ? [specificLang] : await getWatchedLanguages(supabase);
+    console.log(`🎯 Searching for open issues across ${languages.length} languages: ${languages.join(', ')}`);
+
+    let allIssues = [];
+    const seenUrls = new Set();
+
+    for (let i = 0; i < languages.length; i++) {
+      const lang = languages[i];
+      const issues = await fetchIssuesForLanguage(lang, token, 20);
+
+      for (const issue of issues) {
+        if (!seenUrls.has(issue.url)) {
+          seenUrls.add(issue.url);
+          allIssues.push(issue);
+        }
+      }
+
+      // CRITICAL: Respect GitHub Search API rate limit (30 req/min authenticated, 10 req/min unauthenticated)
+      if (i < languages.length - 1) {
+        console.log('⏳ Politeness pause (2s) between Search API requests...');
+        await delay(2000);
+      }
+    }
+
+    collectedCount = allIssues.length;
+    console.log(`✨ Total unique Good First Issues collected: ${collectedCount}`);
+
+    if (limit && allIssues.length > limit) {
+      allIssues = allIssues.slice(0, limit);
+      console.log(`✂️ Limited to ${limit} items as requested.`);
+    }
+
+    if (isDryRun) {
+      console.log('\n--- DRY RUN SAMPLE (First 3 Issues) ---');
+      console.log(JSON.stringify(allIssues.slice(0, 3), null, 2));
+      console.log('Dry run complete. No database writes.');
+      return;
+    }
+
+    if (outputPath) {
+      saveWithDeduplication(outputPath, allIssues);
+    }
+
+    if (supabase) {
+      console.log(`🔌 Upserting ${allIssues.length} issues into Supabase (${supabaseUrl})...`);
+      const batchSize = 50;
+      let upsertedCount = 0;
+
+      for (let i = 0; i < allIssues.length; i += batchSize) {
+        const batch = allIssues.slice(i, i + batchSize);
+        const { data, error } = await supabase
+          .from('opportunities')
+          .upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
+
+        if (error) {
+          console.error(`❌ Error upserting batch ${Math.floor(i / batchSize) + 1}:`, error.message);
+        } else {
+          upsertedCount += batch.length;
+        }
+      }
+      console.log(`✅ Successfully upserted ${upsertedCount} Good First Issues into Supabase.`);
+    } else if (!outputPath) {
+      console.log('ℹ️ No Supabase credentials found and no --output specified. Merging with src/data/seed-opportunities.json');
+      saveWithDeduplication('src/data/seed-opportunities.json', allIssues);
+    }
+  } catch (err) {
+    runError = err;
+    console.error('❌ Critical error during GitHub issues ingestion:', err);
+  } finally {
+    const status = evaluateStatus('github-issues', collectedCount, runError);
+    await recordIngestionRun({
+      source: 'github-issues',
+      startedAt,
+      itemCount: collectedCount,
+      status,
+      errorMessage: runError?.message || null,
+      supabase: supabaseClientInstance,
     });
-  }
-
-  const languages = specificLang ? [specificLang] : await getWatchedLanguages(supabase);
-  console.log(`🎯 Searching for open issues across ${languages.length} languages: ${languages.join(', ')}`);
-
-  let allIssues = [];
-  const seenUrls = new Set();
-
-  for (let i = 0; i < languages.length; i++) {
-    const lang = languages[i];
-    const issues = await fetchIssuesForLanguage(lang, token, 20);
-
-    for (const issue of issues) {
-      if (!seenUrls.has(issue.url)) {
-        seenUrls.add(issue.url);
-        allIssues.push(issue);
-      }
-    }
-
-    // Rate-limit spacer: 2-second pause between sequential language queries to respect Search API
-    if (i < languages.length - 1) {
-      console.log('⏳ Politeness pause (2s) between Search API requests...');
-      await delay(2000);
-    }
-  }
-
-  console.log(`✨ Total unique Good First Issues collected: ${allIssues.length}`);
-
-  if (limit && allIssues.length > limit) {
-    allIssues = allIssues.slice(0, limit);
-    console.log(`✂️ Limited to ${limit} items as requested.`);
-  }
-
-  if (isDryRun) {
-    console.log('\n--- DRY RUN SAMPLE (First 3 Issues) ---');
-    console.log(JSON.stringify(allIssues.slice(0, 3), null, 2));
-    console.log('Dry run complete. No database writes.');
-    return;
-  }
-
-  if (outputPath) {
-    saveWithDeduplication(outputPath, allIssues);
-  }
-
-  if (supabase) {
-    console.log(`🔌 Upserting ${allIssues.length} issues into Supabase (${supabaseUrl})...`);
-    const batchSize = 50;
-    let upsertedCount = 0;
-
-    for (let i = 0; i < allIssues.length; i += batchSize) {
-      const batch = allIssues.slice(i, i + batchSize);
-      const { data, error } = await supabase
-        .from('opportunities')
-        .upsert(batch, { onConflict: 'url', ignoreDuplicates: false });
-
-      if (error) {
-        console.error(`❌ Error upserting batch ${Math.floor(i / batchSize) + 1}:`, error.message);
-      } else {
-        upsertedCount += batch.length;
-      }
-    }
-    console.log(`✅ Successfully upserted ${upsertedCount} Good First Issues into Supabase.`);
-  } else if (!outputPath) {
-    console.log('ℹ️ No Supabase credentials found and no --output specified. Merging with src/data/seed-opportunities.json');
-    saveWithDeduplication('src/data/seed-opportunities.json', allIssues);
+    await sendIngestionAlertIfNeeded({
+      source: 'github-issues',
+      itemCount: collectedCount,
+      status,
+      errorMessage: runError?.message || null,
+      supabase: supabaseClientInstance,
+    });
   }
 }
 
